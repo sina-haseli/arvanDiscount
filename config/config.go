@@ -11,6 +11,7 @@ import (
 
 type config struct {
 	Database Database `yaml:"Database"`
+	App      App      `yaml:"App"`
 	Redis    Redis    `yaml:"Redis"`
 	AppPort  AppPort  `yaml:"AppPort"`
 }
@@ -31,12 +32,18 @@ type AppPort struct {
 	Port string `yaml:"PORT"`
 }
 
+type App struct {
+	LogLevel     bool   `yaml:"LOG_LEVEL"`
+	ComQueueName string `yaml:"COM_QUEUE_NAME"`
+}
+
 var cfg config
 
 type ConfiguredApp struct {
-	DB   *sql.DB
-	RDB  *redis.Client
-	PORT string
+	DB     *sql.DB
+	RDB    *redis.Client
+	Config config
+	PORT   string
 }
 
 func InitializeConfig() *ConfiguredApp {
@@ -73,8 +80,9 @@ func InitializeConfig() *ConfiguredApp {
 	}
 
 	return &ConfiguredApp{
-		DB:   db,
-		RDB:  re,
-		PORT: cfg.AppPort.Port,
+		DB:     db,
+		RDB:    re,
+		Config: cfg,
+		PORT:   cfg.AppPort.Port,
 	}
 }

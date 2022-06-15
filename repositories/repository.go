@@ -8,13 +8,17 @@ import (
 
 type Voucher interface {
 	FindVoucherByCode(code string) (models.VoucherModel, error)
-	InsertIntoRedeemedVoucher(userID, voucherID, step int) error
-	RedeemVoucher(userID int, voucher models.VoucherModel, getStep func(voucher models.VoucherModel) (int, error)) error
+	InsertIntoRedeemedVoucher(userID, voucherID int) error
+	GetRedeemedCount(voucherID int) (int, error)
+	IsUserRedeemedVoucherBefore(userID, voucherID int) (bool, error)
+	RedeemVoucher(userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error
+	Create(rq *models.VoucherRequestModel) (*models.VoucherModel, error)
+	GetVoucherCodeUsed(code string) (*models.RedeemVoucherRequest, error)
 }
 
 type Redis interface {
-	Increase(key string) (int, error)
-	Decrease(key string) (int, error)
+	Dequeue(queueName string) (string, error)
+	Enqueue(message []byte, queueName string) error
 	SetValue(key string, value interface{}) error
 	GetValue(key string) (string, error)
 }

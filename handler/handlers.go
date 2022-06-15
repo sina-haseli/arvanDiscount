@@ -11,6 +11,8 @@ type BaseHandler struct {
 
 type Voucher interface {
 	RedeemVoucher() func(c echo.Context) error
+	GetVoucherCodeUsed() func(c echo.Context) error
+	CreateVoucher() func(c echo.Context) error
 }
 
 func NewBaseHandler(services *services.Services) *BaseHandler {

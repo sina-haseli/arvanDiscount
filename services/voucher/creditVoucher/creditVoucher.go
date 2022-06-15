@@ -3,7 +3,7 @@ package creditVoucher
 import (
 	"discount/models"
 	"discount/repositories"
-	"errors"
+	"encoding/json"
 	"fmt"
 	"strconv"
 )
@@ -13,37 +13,46 @@ type CreditVoucher struct {
 	communicationQueueName string
 }
 
-var VoucherSoldOut = errors.New("voucher sold out")
-
-func NewCreditVoucher(repository *repositories.Repository) *CreditVoucher {
+func NewCreditVoucher(repository *repositories.Repository, comQueue string) *CreditVoucher {
 	return &CreditVoucher{
-		repository: repository,
+		repository:             repository,
+		communicationQueueName: comQueue,
 	}
 }
 
-func (cv *CreditVoucher) Redeem(userID int, code string) error {
-	voucher, err := cv.repository.Voucher.FindVoucherByCode(code)
+func (c *CreditVoucher) Redeem(userID int, code string) error {
+	voucher, err := c.repository.Voucher.FindVoucherByCode(code)
 	if err != nil {
 		return err
 	}
 
-	v, err := cv.getUsedCount(voucher.ID)
-	if err != nil {
-		return err
-	}
+	return c.repository.Voucher.RedeemVoucher(userID, voucher, c.sendIncreaseRequestToWallet)
 
-	if voucher.Usable <= v {
-		return VoucherSoldOut
-	}
-
-	return cv.repository.Voucher.RedeemVoucher(userID, voucher, cv.getStep)
 }
 
-func (cv *CreditVoucher) getUsedCount(voucherID int) (int, error) {
+func (c *CreditVoucher) Create(rq *models.VoucherRequestModel) (*models.VoucherModel, error) {
+	voucher, err := c.repository.Voucher.Create(rq)
+	if err != nil {
+		return nil, err
+	}
+
+	return voucher, nil
+}
+
+func (c *CreditVoucher) GetVoucherCodeUsed(code string) (*models.RedeemVoucherRequest, error) {
+	return c.repository.Voucher.GetVoucherCodeUsed(code)
+}
+
+func (c *CreditVoucher) getUsedCount(voucherID int) (int, error) {
 	var v int
-	val, err := cv.repository.Redis.GetValue(getRedisCacheKeyForVoucher(voucherID))
+	val, err := c.repository.Redis.GetValue(getRedisCacheKeyForVoucher(voucherID))
 	if err != nil {
-		return 0, err
+		v, err = c.repository.Voucher.GetRedeemedCount(voucherID)
+		if err != nil {
+			return 0, err
+		}
+
+		_ = c.repository.Redis.SetValue(getRedisCacheKeyForVoucher(voucherID), v)
 	} else {
 		v, err = strconv.Atoi(val)
 		if err != nil {
@@ -53,17 +62,21 @@ func (cv *CreditVoucher) getUsedCount(voucherID int) (int, error) {
 	return v, nil
 }
 
-func (cv *CreditVoucher) getStep(voucher models.VoucherModel) (int, error) {
-	v, err := cv.repository.Redis.Increase(getRedisCacheKeyForVoucher(voucher.ID))
+func (c *CreditVoucher) sendIncreaseRequestToWallet(userID int, voucher models.VoucherModel) error {
+	d, err := json.Marshal(models.IncreaseRequestModel{
+		UserID: userID,
+		Amount: voucher.Amount,
+	})
 	if err != nil {
-		return 0, err
+		return err
 	}
 
-	if v > voucher.Usable {
-		return 0, VoucherSoldOut
+	err = c.repository.Redis.Enqueue(d, c.communicationQueueName)
+	if err != nil {
+		return err
 	}
 
-	return v, nil
+	return nil
 }
 
 func getRedisCacheKeyForVoucher(voucherID int) string {

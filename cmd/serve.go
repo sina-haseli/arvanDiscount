@@ -26,7 +26,7 @@ func init() {
 func serve() {
 	ca := config.InitializeConfig()
 	rep := repositories.NewRepository(ca.DB, ca.RDB)
-	ser := services.NewServices(rep)
+	ser := services.NewServices(rep, ca)
 	hndl := handler.NewBaseHandler(ser)
 	initializeHttpServer(hndl, ca.PORT)
 }

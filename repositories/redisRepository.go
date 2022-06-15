@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"github.com/go-redis/redis/v7"
+	"time"
 )
 
 type redisRepository struct {
@@ -14,22 +15,18 @@ func NewRedisRepository(client *redis.Client) *redisRepository {
 	}
 }
 
-func (r *redisRepository) Increase(key string) (int, error) {
-	res, err := r.client.Incr(key).Result()
+func (r *redisRepository) Dequeue(channelName string) (string, error) {
+	res, err := r.client.BLPop(0*time.Second, channelName).Result()
 	if err != nil {
-		return 0, err
+		return "", err
 	}
 
-	return int(res), nil
+	return res[0], nil
 }
 
-func (r *redisRepository) Decrease(key string) (int, error) {
-	res, err := r.client.Decr(key).Result()
-	if err != nil {
-		return 0, err
-	}
-
-	return int(res), nil
+func (r *redisRepository) Enqueue(message []byte, channelName string) error {
+	_, err := r.client.RPush(channelName, string(message)).Result()
+	return err
 }
 
 func (r *redisRepository) SetValue(key string, value interface{}) error {

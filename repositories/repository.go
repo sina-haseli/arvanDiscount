@@ -8,6 +8,7 @@ import (
 
 type Voucher interface {
 	FindVoucherByCode(code string) (models.VoucherModel, error)
+	FindVoucherByCodeAndNotUsed(code string) (models.VoucherModel, error)
 	InsertIntoRedeemedVoucher(userID, voucherID int) error
 	GetRedeemedCount(voucherID int) (int, error)
 	IsUserRedeemedVoucherBefore(userID, voucherID int) (bool, error)

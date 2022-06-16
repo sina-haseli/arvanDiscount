@@ -21,7 +21,7 @@ func NewCreditVoucher(repository *repositories.Repository, comQueue string) *Cre
 }
 
 func (c *CreditVoucher) Redeem(userID int, code string) error {
-	voucher, err := c.repository.Voucher.FindVoucherByCode(code)
+	voucher, err := c.repository.Voucher.FindVoucherByCodeAndNotUsed(code)
 	if err != nil {
 		return err
 	}

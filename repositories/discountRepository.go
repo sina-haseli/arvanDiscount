@@ -100,13 +100,13 @@ func (v *voucherRepository) GetVoucherCodeUsed(code string) (*models.RedeemVouch
 	return &rvr, nil
 }
 
-func (v *voucherRepository) findVoucherByCodeAndNotUsed(code string) (models.VoucherModel, error) {
+func (v *voucherRepository) FindVoucherByCodeAndNotUsed(code string) (models.VoucherModel, error) {
 	var vm models.VoucherModel
 	//check it
 	//	v.db.Prepare(validateVoucherQuery)
 	rows, err := v.dbq.Query(findVoucherByCodeAndNotUsedQuery, code)
 	if err == sql.ErrNoRows {
-		return vm, InvalidVoucherCode
+		return vm, VoucherSoldOut
 	}
 
 	if err != nil {
@@ -171,9 +171,17 @@ func (v *voucherRepository) FindVoucherByCode(code string) (models.VoucherModel,
 }
 
 func (v *voucherRepository) UpdateVoucherById(voucherID int) error {
-	_, err := v.dbq.Exec(updateVoucherQuery, voucherID)
+	rows, err := v.dbq.Exec(updateVoucherQuery, voucherID)
 	if err != nil {
 		return err
+	}
+	ra, err := rows.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if ra == 0 {
+		return fmt.Errorf("failed to update into redeemed voucher, values : %d", voucherID)
 	}
 	return nil
 }

@@ -25,7 +25,7 @@ func (c *CreditVoucher) Redeem(ctx context.Context, userID int, code string) err
 		return err
 	}
 
-	result := c.repository.Voucher.RedeemVoucher(ctx, userID, voucher, c.sendIncreaseRequestToWallet)
+	result := c.repository.Voucher.RedeemVoucher(ctx, userID, voucher)
 	if result == nil {
 		err := c.sendIncreaseRequestToWallet(userID, voucher)
 		if err != nil {

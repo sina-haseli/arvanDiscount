@@ -12,7 +12,7 @@ type Voucher interface {
 	FindVoucherByCodeAndNotUsed(ctx context.Context, code string) (models.VoucherModel, error)
 	InsertIntoRedeemedVoucher(userID, voucherID int) error
 	IsUserRedeemedVoucherBefore(userID, voucherID int) (bool, error)
-	RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error
+	RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel) error
 	Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error)
 	GetVoucherCodeUsed(ctx context.Context, code string) (*[]models.RedeemVoucherRequest, error)
 }

@@ -1,20 +1,20 @@
 package repositories
 
 import (
+	"context"
 	"database/sql"
 	"discount/models"
 	"github.com/go-redis/redis/v7"
 )
 
 type Voucher interface {
-	FindVoucherByCode(code string) (models.VoucherModel, error)
-	FindVoucherByCodeAndNotUsed(code string) (models.VoucherModel, error)
+	FindVoucherByCode(ctx context.Context, code string) (models.VoucherModel, error)
+	FindVoucherByCodeAndNotUsed(ctx context.Context, code string) (models.VoucherModel, error)
 	InsertIntoRedeemedVoucher(userID, voucherID int) error
-	GetRedeemedCount(voucherID int) (int, error)
 	IsUserRedeemedVoucherBefore(userID, voucherID int) (bool, error)
-	RedeemVoucher(userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error
-	Create(rq *models.VoucherRequestModel) (*models.VoucherModel, error)
-	GetVoucherCodeUsed(code string) (*models.RedeemVoucherRequest, error)
+	RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error
+	Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error)
+	GetVoucherCodeUsed(ctx context.Context, code string) (*[]models.RedeemVoucherRequest, error)
 }
 
 type Redis interface {

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"discount/models"
 	"discount/repositories"
 	"discount/services"
@@ -31,7 +32,9 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 			return echo.ErrBadRequest
 		}
 
-		err = vh.service.Voucher.Redeem(rq.UserID, rq.Code)
+		ctx := context.TODO()
+
+		err = vh.service.Voucher.Redeem(ctx, rq.UserID, rq.Code)
 		switch err {
 		case repositories.VoucherSoldOut:
 			return c.JSON(http.StatusNotAcceptable, map[string]interface{}{"message": "Sorry voucher code sold out! :("})
@@ -51,10 +54,12 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 func (vh *VoucherHandler) GetVoucherCodeUsed() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		code := c.Param("voucherCode")
+		ctx := context.TODO()
 
-		voucher, errs := vh.service.Voucher.GetVoucherCodeUsed(code)
+		voucher, errs := vh.service.Voucher.GetVoucherCodeUsed(ctx, code)
+		println(errs)
 		if errs != nil {
-			return echo.ErrInternalServerError
+			return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{"message": "Entered voucher code is invalid"})
 		}
 
 		_ = c.JSON(200, voucher)
@@ -70,9 +75,11 @@ func (vh *VoucherHandler) CreateVoucher() func(c echo.Context) error {
 			return err
 		}
 
-		voucher, errs := vh.service.Voucher.Create(&rq)
+		ctx := context.TODO()
+
+		voucher, errs := vh.service.Voucher.Create(ctx, &rq)
 		if errs != nil {
-			return errs
+			return echo.ErrInternalServerError
 		}
 
 		return c.JSON(http.StatusOK, voucher)

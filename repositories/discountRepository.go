@@ -23,7 +23,6 @@ const (
 	validateVoucherQuery             = "SELECT id, code, usable, amount FROM vouchers WHERE code = $1 limit 1"
 	findVoucherByCodeAndNotUsedQuery = "SELECT id, code, usable, amount FROM vouchers WHERE code = $1 AND usable > 0 limit 1"
 	redeemVoucherQuery               = "INSERT INTO redeemed_voucher (user_id, voucher_id) VALUES ($1, $2)"
-	redeemVoucherCountQuery          = "SELECT COUNT(1) from redeemed_voucher WHERE voucher_id = $1"
 	validateFirstTimeRedeemQuery     = "SELECT 1 from redeemed_voucher WHERE voucher_id = $1 AND user_id = $2"
 	createVoucherQuery               = "INSERT INTO vouchers (code, amount, usable) VALUES ($1, $2, $3)"
 	usersRedeemedVoucherQuery        = "SELECT user_id, voucher_id FROM redeemed_voucher WHERE voucher_id = $1"
@@ -42,7 +41,7 @@ func NewVoucherRepository(db *sql.DB) *voucherRepository {
 	}
 }
 
-func (v *voucherRepository) Create(rq *models.VoucherRequestModel) (*models.VoucherModel, error) {
+func (v *voucherRepository) Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error) {
 	var vm models.VoucherModel
 	vm.Code = rq.Code
 	vm.Amount = rq.Amount
@@ -53,7 +52,7 @@ func (v *voucherRepository) Create(rq *models.VoucherRequestModel) (*models.Vouc
 		return nil, err
 	}
 
-	result, err := v.FindVoucherByCode(vm.Code)
+	result, err := v.FindVoucherByCode(ctx, vm.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -61,13 +60,14 @@ func (v *voucherRepository) Create(rq *models.VoucherRequestModel) (*models.Vouc
 	return &vm, nil
 }
 
-func (v *voucherRepository) GetVoucherCodeUsed(code string) (*models.RedeemVoucherRequest, error) {
+func (v *voucherRepository) GetVoucherCodeUsed(ctx context.Context, code string) (*[]models.RedeemVoucherRequest, error) {
 
 	var rvr models.RedeemVoucherRequest
 
-	voucher, err := v.FindVoucherByCode(code)
-	if err != nil {
-		return nil, err
+	voucher, err := v.FindVoucherByCode(ctx, code)
+	if err != nil || voucher.ID == 0 {
+		println(InvalidVoucherCode)
+		return nil, InvalidVoucherCode
 	}
 
 	rows, err := v.dbq.Query(usersRedeemedVoucherQuery, voucher.ID)
@@ -92,15 +92,20 @@ func (v *voucherRepository) GetVoucherCodeUsed(code string) (*models.RedeemVouch
 		return nil, InvalidVoucherCode
 	}
 
-	err = rows.Scan(&rvr.UserID, &rvr.Code)
-	if err != nil {
-		return nil, err
+	var users []models.RedeemVoucherRequest
+	for rows.Next() {
+		err = rows.Scan(&rvr.UserID, &rvr.Code)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, rvr)
 	}
 
-	return &rvr, nil
+	return &users, nil
+
 }
 
-func (v *voucherRepository) FindVoucherByCodeAndNotUsed(code string) (models.VoucherModel, error) {
+func (v *voucherRepository) FindVoucherByCodeAndNotUsed(ctx context.Context, code string) (models.VoucherModel, error) {
 	var vm models.VoucherModel
 	//check it
 	//	v.db.Prepare(validateVoucherQuery)
@@ -135,7 +140,7 @@ func (v *voucherRepository) FindVoucherByCodeAndNotUsed(code string) (models.Vou
 	return vm, nil
 }
 
-func (v *voucherRepository) FindVoucherByCode(code string) (models.VoucherModel, error) {
+func (v *voucherRepository) FindVoucherByCode(ctx context.Context, code string) (models.VoucherModel, error) {
 	var vm models.VoucherModel
 	//check it
 	//	v.db.Prepare(validateVoucherQuery)
@@ -232,37 +237,7 @@ func (v *voucherRepository) IsUserRedeemedVoucherBefore(userID, voucherID int) (
 	return false, nil
 }
 
-func (v *voucherRepository) GetRedeemedCount(voucherID int) (int, error) {
-	rows, err := v.dbq.Query(redeemVoucherCountQuery, voucherID)
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-
-	if err != nil {
-		return 0, err
-	}
-
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-			fmt.Println("failed to close rows: ", err)
-		}
-	}(rows)
-
-	if rows.Next() == false {
-		return 0, nil
-	}
-
-	var i int
-	err = rows.Scan(&i)
-	if err != nil {
-		return 0, err
-	}
-
-	return i, nil
-}
-
-func (v *voucherRepository) RedeemVoucher(userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error {
+func (v *voucherRepository) RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error {
 	trx, err := v.beginTransaction()
 	if err != nil {
 		return err

@@ -1,9 +1,12 @@
 package voucher
 
-import "discount/models"
+import (
+	"context"
+	"discount/models"
+)
 
 type Voucher interface {
-	Redeem(userID int, code string) error
-	Create(rq *models.VoucherRequestModel) (*models.VoucherModel, error)
-	GetVoucherCodeUsed(code string) (*models.RedeemVoucherRequest, error)
+	Redeem(ctx context.Context, userID int, code string) error
+	Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error)
+	GetVoucherCodeUsed(ctx context.Context, code string) (*[]models.RedeemVoucherRequest, error)
 }

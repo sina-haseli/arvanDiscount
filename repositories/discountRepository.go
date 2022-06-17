@@ -135,6 +135,7 @@ func (v *voucherRepository) FindVoucherByCodeAndNotUsed(ctx context.Context, cod
 	if err != nil {
 		return vm, err
 	}
+	ctx.Done()
 
 	return vm, nil
 }
@@ -170,6 +171,8 @@ func (v *voucherRepository) FindVoucherByCode(ctx context.Context, code string) 
 	if err != nil {
 		return vm, err
 	}
+
+	ctx.Done()
 
 	return vm, nil
 }

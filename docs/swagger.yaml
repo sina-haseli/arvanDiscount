@@ -1,0 +1,86 @@
+definitions:
+  models.RedeemVoucherRequest:
+    properties:
+      code:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  models.VoucherRequestModel:
+    properties:
+      amount:
+        type: integer
+      code:
+        type: string
+      usable:
+        type: integer
+    type: object
+info:
+  contact: {}
+paths:
+  /api/voucher/:voucherCode/used:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: voucherCode
+        in: path
+        name: voucherCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: GetVoucherCodeUsed
+      tags:
+      - GetVoucherCodeUsed
+  /api/voucher/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Voucher Code
+        in: body
+        name: voucher
+        required: true
+        schema:
+          $ref: '#/definitions/models.VoucherRequestModel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: CreateVoucher.
+      tags:
+      - Redeem
+  /api/voucher/redeem:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Voucher Code
+        in: body
+        name: voucher
+        required: true
+        schema:
+          $ref: '#/definitions/models.RedeemVoucherRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: RedeemVoucher.
+      tags:
+      - Redeem
+swagger: "2.0"

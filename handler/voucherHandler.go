@@ -20,6 +20,14 @@ func newVoucherHandler(service *services.Services) *VoucherHandler {
 	}
 }
 
+// RedeemVoucher
+// @Summary RedeemVoucher.
+// @Tags Redeem
+// @Accept       json
+// @Produce json
+// @Param voucher body models.RedeemVoucherRequest true "Voucher Code"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/voucher/redeem [post]
 func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		var rq models.RedeemVoucherRequest
@@ -51,6 +59,14 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 	}
 }
 
+// GetVoucherCodeUsed
+// @Summary GetVoucherCodeUsed
+// @Tags GetVoucherCodeUsed
+// @Accept       json
+// @Produce json
+// @Param voucherCode path string true "voucherCode"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/voucher/:voucherCode/used [get]
 func (vh *VoucherHandler) GetVoucherCodeUsed() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		code := c.Param("voucherCode")
@@ -67,6 +83,14 @@ func (vh *VoucherHandler) GetVoucherCodeUsed() func(c echo.Context) error {
 	}
 }
 
+// CreateVoucher
+// @Summary CreateVoucher.
+// @Tags Redeem
+// @Accept       json
+// @Produce json
+// @Param voucher body models.VoucherRequestModel true "Voucher Code"
+// @Success 200 {object} map[string]interface{}
+// @Router /api/voucher/create [post]
 func (vh *VoucherHandler) CreateVoucher() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		var rq models.VoucherRequestModel

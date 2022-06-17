@@ -65,8 +65,7 @@ func (v *voucherRepository) GetVoucherCodeUsed(ctx context.Context, code string)
 	var rvr models.RedeemVoucherRequest
 
 	voucher, err := v.FindVoucherByCode(ctx, code)
-	if err != nil || voucher.ID == 0 {
-		println(InvalidVoucherCode)
+	if err != nil {
 		return nil, InvalidVoucherCode
 	}
 

@@ -239,7 +239,7 @@ func (v *voucherRepository) IsUserRedeemedVoucherBefore(userID, voucherID int) (
 	return false, nil
 }
 
-func (v *voucherRepository) RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel, success func(userID int, voucher models.VoucherModel) error) error {
+func (v *voucherRepository) RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel) error {
 	trx, err := v.beginTransaction()
 	if err != nil {
 		return err
@@ -275,15 +275,7 @@ func (v *voucherRepository) RedeemVoucher(ctx context.Context, userID int, vouch
 		return err
 	}
 
-	err = success(userID, voucher)
-	if err != nil {
-		er := trx.rollbackTransaction()
-		if er != nil {
-			return er
-		}
-
-		return err
-	}
+	ctx.Done()
 
 	return trx.commitTransaction()
 }

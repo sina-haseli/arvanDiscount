@@ -25,8 +25,14 @@ func (c *CreditVoucher) Redeem(ctx context.Context, userID int, code string) err
 		return err
 	}
 
-	return c.repository.Voucher.RedeemVoucher(ctx, userID, voucher, c.sendIncreaseRequestToWallet)
-
+	result := c.repository.Voucher.RedeemVoucher(ctx, userID, voucher, c.sendIncreaseRequestToWallet)
+	if result == nil {
+		err := c.sendIncreaseRequestToWallet(userID, voucher)
+		if err != nil {
+			return err
+		}
+	}
+	return result
 }
 
 func (c *CreditVoucher) Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error) {

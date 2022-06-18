@@ -4,7 +4,7 @@ definitions:
       code:
         type: string
       user_id:
-        type: integer
+        type: string
     type: object
   models.VoucherRequestModel:
     properties:

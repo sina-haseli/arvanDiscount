@@ -1,6 +1,7 @@
 package models
 
 type IncreaseRequestModel struct {
-	UserID int `json:"user_id"`
-	Amount int `json:"amount"`
+	UserID    string `json:"user_id"`
+	VoucherID int    `json:"voucher_id"`
+	Amount    int    `json:"amount"`
 }

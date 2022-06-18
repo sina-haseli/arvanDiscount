@@ -1,6 +1,6 @@
 package models
 
 type RedeemedVoucher struct {
-	UserID    int
+	UserID    string
 	VoucherID int
 }

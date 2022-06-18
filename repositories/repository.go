@@ -9,10 +9,7 @@ import (
 
 type Voucher interface {
 	FindVoucherByCode(ctx context.Context, code string) (models.VoucherModel, error)
-	FindVoucherByCodeAndNotUsed(ctx context.Context, code string) (models.VoucherModel, error)
-	InsertIntoRedeemedVoucher(userID, voucherID int) error
-	IsUserRedeemedVoucherBefore(userID, voucherID int) (bool, error)
-	RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel) error
+	RedeemVoucher(ctx context.Context, userID string, voucherID int) error
 	Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error)
 	GetVoucherCodeUsed(ctx context.Context, code string) (*[]models.RedeemVoucherRequest, error)
 }
@@ -20,8 +17,6 @@ type Voucher interface {
 type Redis interface {
 	Dequeue(queueName string) (string, error)
 	Enqueue(message []byte, queueName string) error
-	SetValue(key string, value interface{}) error
-	GetValue(key string) (string, error)
 }
 
 type Repository struct {

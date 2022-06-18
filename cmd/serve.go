@@ -13,7 +13,7 @@ import (
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "serve arvan wallet application",
+	Short: "serve arvan discount application",
 	Run: func(cmd *cobra.Command, args []string) {
 		serve()
 	},

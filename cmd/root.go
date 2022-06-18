@@ -8,7 +8,7 @@ import (
 )
 
 var rootCMD = &cobra.Command{
-	Use:   "arvan",
+	Use:   "discount",
 	Short: "application that handles customers wallet",
 }
 

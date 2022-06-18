@@ -28,21 +28,3 @@ func (r *redisRepository) Enqueue(message []byte, channelName string) error {
 	_, err := r.client.RPush(channelName, string(message)).Result()
 	return err
 }
-
-func (r *redisRepository) SetValue(key string, value interface{}) error {
-	_, err := r.client.Set(key, value, 0).Result()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *redisRepository) GetValue(key string) (string, error) {
-	v, err := r.client.Get(key).Result()
-	if err != nil {
-		return "", err
-	}
-
-	return v, nil
-}

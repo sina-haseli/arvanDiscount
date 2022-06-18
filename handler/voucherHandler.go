@@ -1,11 +1,9 @@
 package handler
 
 import (
-	"context"
 	"discount/models"
 	"discount/repositories"
 	"discount/services"
-	"fmt"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
@@ -36,13 +34,11 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 			return err
 		}
 
-		if rq.Code == "" || rq.UserID == 0 {
+		if rq.Code == "" || rq.UserID == "" {
 			return echo.ErrBadRequest
 		}
 
-		ctx := context.TODO()
-
-		err = vh.service.Voucher.Redeem(ctx, rq.UserID, rq.Code)
+		err = vh.service.Voucher.Redeem(c.Request().Context(), rq.UserID, rq.Code)
 		switch err {
 		case repositories.VoucherSoldOut:
 			return c.JSON(http.StatusNotAcceptable, map[string]interface{}{"message": "Sorry voucher code sold out! :("})
@@ -51,7 +47,6 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 		case repositories.VoucherAlreadyUsed:
 			return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{"message": "You have already used this code"})
 		default:
-			fmt.Println(err)
 			return echo.ErrInternalServerError
 		case nil:
 			return c.JSON(http.StatusOK, map[string]interface{}{"message": "Congratulation your credit will be added to your wallet soon"})
@@ -70,16 +65,18 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 func (vh *VoucherHandler) GetVoucherCodeUsed() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		code := c.Param("voucherCode")
-		ctx := context.TODO()
 
-		voucher, errs := vh.service.Voucher.GetVoucherCodeUsed(ctx, code)
-		println(errs)
+		vouchers, errs := vh.service.Voucher.GetVoucherCodeUsed(c.Request().Context(), code)
 		if errs != nil {
-			return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{"message": "Entered voucher code is invalid"})
+			switch errs {
+			case repositories.InvalidVoucherCode:
+				return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{"message": "Entered voucher code is invalid"})
+			default:
+				return c.JSON(http.StatusNotFound, map[string]interface{}{"message": "Entered voucher code is invalid"})
+			}
 		}
 
-		_ = c.JSON(200, voucher)
-		return nil
+		return c.JSON(200, vouchers)
 	}
 }
 
@@ -99,9 +96,7 @@ func (vh *VoucherHandler) CreateVoucher() func(c echo.Context) error {
 			return err
 		}
 
-		ctx := context.TODO()
-
-		voucher, errs := vh.service.Voucher.Create(ctx, &rq)
+		voucher, errs := vh.service.Voucher.Create(c.Request().Context(), &rq)
 		if errs != nil {
 			return echo.ErrInternalServerError
 		}

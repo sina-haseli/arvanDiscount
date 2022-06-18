@@ -19,20 +19,23 @@ func NewCreditVoucher(repository *repositories.Repository, comQueue string) *Cre
 	}
 }
 
-func (c *CreditVoucher) Redeem(ctx context.Context, userID int, code string) error {
-	voucher, err := c.repository.Voucher.FindVoucherByCodeAndNotUsed(ctx, code)
+func (c *CreditVoucher) Redeem(ctx context.Context, userID string, code string) error {
+	voucher, err := c.repository.Voucher.FindVoucherByCode(ctx, code)
 	if err != nil {
 		return err
 	}
 
-	result := c.repository.Voucher.RedeemVoucher(ctx, userID, voucher)
-	if result == nil {
-		err := c.sendIncreaseRequestToWallet(userID, voucher)
-		if err != nil {
-			return err
-		}
+	err = c.repository.Voucher.RedeemVoucher(ctx, userID, voucher.ID)
+	if err != nil {
+		return err
 	}
-	return result
+
+	err = c.sendIncreaseRequestToWallet(userID, voucher)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *CreditVoucher) Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error) {
@@ -48,10 +51,11 @@ func (c *CreditVoucher) GetVoucherCodeUsed(ctx context.Context, code string) (*[
 	return c.repository.Voucher.GetVoucherCodeUsed(ctx, code)
 }
 
-func (c *CreditVoucher) sendIncreaseRequestToWallet(userID int, voucher models.VoucherModel) error {
+func (c *CreditVoucher) sendIncreaseRequestToWallet(userID string, voucher models.VoucherModel) error {
 	d, err := json.Marshal(models.IncreaseRequestModel{
-		UserID: userID,
-		Amount: voucher.Amount,
+		UserID:    userID,
+		VoucherID: voucher.ID,
+		Amount:    voucher.Amount,
 	})
 	if err != nil {
 		return err

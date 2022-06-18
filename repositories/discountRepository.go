@@ -9,24 +9,16 @@ import (
 )
 
 type voucherRepository struct {
-	db  *sql.DB
-	dbq dbQE
-	tx  *sql.Tx
-}
-
-type dbQE interface {
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	Exec(query string, args ...interface{}) (sql.Result, error)
+	db *sql.DB
 }
 
 const (
-	validateVoucherQuery             = "SELECT id, code, usable, amount FROM vouchers WHERE code = $1 limit 1"
-	findVoucherByCodeAndNotUsedQuery = "SELECT id, code, usable, amount FROM vouchers WHERE code = $1 AND usable > 0 limit 1"
-	redeemVoucherQuery               = "INSERT INTO redeemed_voucher (user_id, voucher_id) VALUES ($1, $2)"
-	validateFirstTimeRedeemQuery     = "SELECT 1 from redeemed_voucher WHERE voucher_id = $1 AND user_id = $2"
-	createVoucherQuery               = "INSERT INTO vouchers (code, amount, usable) VALUES ($1, $2, $3)"
-	usersRedeemedVoucherQuery        = "SELECT user_id, voucher_id FROM redeemed_voucher WHERE voucher_id = $1"
-	updateVoucherQuery               = "UPDATE vouchers SET usable = usable - 1 WHERE id = $1"
+	validateVoucherQuery         = "SELECT id, code, usable, amount FROM vouchers WHERE code = $1 limit 1"
+	redeemVoucherQuery           = "INSERT INTO redeemed_voucher (user_id, voucher_id) VALUES ($1, $2)"
+	validateFirstTimeRedeemQuery = "SELECT 1 from redeemed_voucher WHERE voucher_id = $1 AND user_id = $2"
+	createVoucherQuery           = "INSERT INTO vouchers (code, amount, usable) VALUES ($1, $2, $3)"
+	usersRedeemedVoucherQuery    = "SELECT user_id, voucher_id FROM redeemed_voucher WHERE voucher_id = $1"
+	updateVoucherQuery           = "UPDATE vouchers SET usable = usable - 1 WHERE id = $1 and usable > 0"
 )
 
 var InvalidVoucherCode = errors.New("invalid voucher code")
@@ -35,19 +27,18 @@ var VoucherSoldOut = errors.New("voucher sold out")
 
 func NewVoucherRepository(db *sql.DB) *voucherRepository {
 	return &voucherRepository{
-		db:  db,
-		dbq: db,
-		tx:  nil,
+		db: db,
 	}
 }
 
 func (v *voucherRepository) Create(ctx context.Context, rq *models.VoucherRequestModel) (*models.VoucherModel, error) {
-	var vm models.VoucherModel
-	vm.Code = rq.Code
-	vm.Amount = rq.Amount
-	vm.Usable = rq.Usable
+	vm := models.VoucherModel{
+		Code:   rq.Code,
+		Amount: rq.Amount,
+		Usable: rq.Usable,
+	}
 
-	_, err := v.dbq.Exec(createVoucherQuery, &vm.Code, &vm.Amount, &vm.Usable)
+	_, err := v.db.ExecContext(ctx, createVoucherQuery, &vm.Code, &vm.Amount, &vm.Usable)
 	if err != nil {
 		return nil, err
 	}
@@ -56,6 +47,7 @@ func (v *voucherRepository) Create(ctx context.Context, rq *models.VoucherReques
 	if err != nil {
 		return nil, err
 	}
+
 	vm.ID = result.ID
 	return &vm, nil
 }
@@ -69,7 +61,7 @@ func (v *voucherRepository) GetVoucherCodeUsed(ctx context.Context, code string)
 		return nil, InvalidVoucherCode
 	}
 
-	rows, err := v.dbq.Query(usersRedeemedVoucherQuery, voucher.ID)
+	rows, err := v.db.QueryContext(ctx, usersRedeemedVoucherQuery, voucher.ID)
 
 	if err == sql.ErrNoRows {
 		return nil, InvalidVoucherCode
@@ -104,47 +96,10 @@ func (v *voucherRepository) GetVoucherCodeUsed(ctx context.Context, code string)
 
 }
 
-func (v *voucherRepository) FindVoucherByCodeAndNotUsed(ctx context.Context, code string) (models.VoucherModel, error) {
-	var vm models.VoucherModel
-	//check it
-	//	v.db.Prepare(validateVoucherQuery)
-	rows, err := v.dbq.Query(findVoucherByCodeAndNotUsedQuery, code)
-	if err == sql.ErrNoRows {
-		return vm, VoucherSoldOut
-	}
-
-	if err != nil {
-		return vm, err
-	}
-
-	defer func(rows *sql.Rows) {
-		err := rows.Close()
-		if err != nil {
-			// use logger
-			fmt.Println("Error closing rows: ", err)
-		}
-	}(rows)
-	//read docs
-	//v.db.QueryRow(validateVoucherQuery, code)
-
-	if rows.Next() == false {
-		return vm, InvalidVoucherCode
-	}
-
-	err = rows.Scan(&vm.ID, &vm.Code, &vm.Usable, &vm.Amount)
-	if err != nil {
-		return vm, err
-	}
-	ctx.Done()
-
-	return vm, nil
-}
-
 func (v *voucherRepository) FindVoucherByCode(ctx context.Context, code string) (models.VoucherModel, error) {
 	var vm models.VoucherModel
-	//check it
-	//	v.db.Prepare(validateVoucherQuery)
-	rows, err := v.dbq.Query(validateVoucherQuery, code)
+
+	rows, err := v.db.QueryContext(ctx, validateVoucherQuery, code)
 	if err == sql.ErrNoRows {
 		return vm, InvalidVoucherCode
 	}
@@ -160,8 +115,6 @@ func (v *voucherRepository) FindVoucherByCode(ctx context.Context, code string) 
 			fmt.Println("Error closing rows: ", err)
 		}
 	}(rows)
-	//read docs
-	//v.db.QueryRow(validateVoucherQuery, code)
 
 	if rows.Next() == false {
 		return vm, InvalidVoucherCode
@@ -172,35 +125,30 @@ func (v *voucherRepository) FindVoucherByCode(ctx context.Context, code string) 
 		return vm, err
 	}
 
-	ctx.Done()
-
 	return vm, nil
 }
 
-func (v *voucherRepository) UpdateVoucherById(voucherID int) error {
-	rows, err := v.dbq.Exec(updateVoucherQuery, voucherID)
+func (v *voucherRepository) updateVoucherById(ctx context.Context, tx *sql.Tx, voucherID int) (bool, error) {
+	rows, err := tx.ExecContext(ctx, updateVoucherQuery, voucherID)
 	if err != nil {
-		return err
+		return false, err
 	}
 	ra, err := rows.RowsAffected()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if ra == 0 {
-		return fmt.Errorf("failed to update into redeemed voucher, values : %d", voucherID)
+		return false, nil
 	}
-	return nil
+	return true, nil
 }
 
-func (v *voucherRepository) InsertIntoRedeemedVoucher(userID, voucherID int) error {
-	rows, err := v.dbq.Exec(redeemVoucherQuery, userID, voucherID)
+func (v *voucherRepository) insertIntoRedeemedVoucher(ctx context.Context, tx *sql.Tx, userID string, voucherID int) error {
+	rows, err := tx.ExecContext(ctx, redeemVoucherQuery, userID, voucherID)
 	if err != nil {
 		return err
 	}
-
-	//use context
-	//v.db.ExecContext(v.tx.Context(), redeemVoucherQuery, userID, voucherID, step)
 
 	ra, err := rows.RowsAffected()
 	if err != nil {
@@ -214,8 +162,60 @@ func (v *voucherRepository) InsertIntoRedeemedVoucher(userID, voucherID int) err
 	return nil
 }
 
-func (v *voucherRepository) IsUserRedeemedVoucherBefore(userID, voucherID int) (bool, error) {
-	rows, err := v.dbq.Query(validateFirstTimeRedeemQuery, voucherID, userID)
+func (v *voucherRepository) RedeemVoucher(ctx context.Context, userID string, voucherID int) error {
+	trx, err := v.db.BeginTx(ctx, &sql.TxOptions{})
+	if err != nil {
+		return err
+	}
+
+	isRedeemed, err := v.isUserRedeemedVoucherBefore(ctx, trx, userID, voucherID)
+	if err != nil {
+		if er := trx.Rollback(); er != nil {
+			return er
+		}
+
+		return err
+	}
+
+	if isRedeemed {
+		if er := trx.Rollback(); er != nil {
+			return er
+		}
+
+		return VoucherAlreadyUsed
+	}
+
+	vUpdated, err := v.updateVoucherById(ctx, trx, voucherID)
+	if err != nil {
+		if er := trx.Rollback(); er != nil {
+			return er
+		}
+
+		return err
+	}
+
+	if !vUpdated {
+		if er := trx.Rollback(); er != nil {
+			return er
+		}
+
+		return VoucherSoldOut
+	}
+
+	err = v.insertIntoRedeemedVoucher(ctx, trx, userID, voucherID)
+	if err != nil {
+		if er := trx.Rollback(); er != nil {
+			return er
+		}
+
+		return err
+	}
+
+	return trx.Commit()
+}
+
+func (v *voucherRepository) isUserRedeemedVoucherBefore(ctx context.Context, tx *sql.Tx, userID string, voucherID int) (bool, error) {
+	rows, err := tx.QueryContext(ctx, validateFirstTimeRedeemQuery, voucherID, userID)
 	if err == sql.ErrNoRows {
 		return false, nil
 	}
@@ -237,70 +237,4 @@ func (v *voucherRepository) IsUserRedeemedVoucherBefore(userID, voucherID int) (
 	}
 
 	return false, nil
-}
-
-func (v *voucherRepository) RedeemVoucher(ctx context.Context, userID int, voucher models.VoucherModel) error {
-	trx, err := v.beginTransaction()
-	if err != nil {
-		return err
-	}
-
-	ub, err := trx.IsUserRedeemedVoucherBefore(userID, voucher.ID)
-	if ub {
-		er := trx.rollbackTransaction()
-		if er != nil {
-			return er
-		}
-
-		return VoucherAlreadyUsed
-	}
-
-	err = trx.UpdateVoucherById(voucher.ID)
-	if err != nil {
-		er := trx.rollbackTransaction()
-		if er != nil {
-			return er
-		}
-
-		return VoucherSoldOut
-	}
-
-	err = trx.InsertIntoRedeemedVoucher(userID, voucher.ID)
-	if err != nil {
-		er := trx.rollbackTransaction()
-		if er != nil {
-			return er
-		}
-
-		return err
-	}
-
-	ctx.Done()
-
-	return trx.commitTransaction()
-}
-
-func (v *voucherRepository) beginTransaction() (*voucherRepository, error) {
-	tx, err := v.db.BeginTx(context.Background(), &sql.TxOptions{})
-	if err != nil {
-		return &voucherRepository{}, err
-	}
-
-	return &voucherRepository{tx: tx, dbq: tx}, nil
-}
-
-func (v *voucherRepository) commitTransaction() error {
-	if v.tx == nil {
-		return fmt.Errorf("you cant commit tansaction befor start it")
-	}
-
-	return v.tx.Commit()
-}
-
-func (v *voucherRepository) rollbackTransaction() error {
-	if v.tx == nil {
-		return fmt.Errorf("you cant rollback tansaction befor start it")
-	}
-
-	return v.tx.Rollback()
 }

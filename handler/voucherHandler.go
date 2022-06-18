@@ -66,7 +66,7 @@ func (vh *VoucherHandler) RedeemVoucher() func(c echo.Context) error {
 // @Produce json
 // @Param voucherCode path string true "voucherCode"
 // @Success 200 {object} map[string]interface{}
-// @Router /api/voucher/:voucherCode/used [get]
+// @Router /api/voucher/{voucherCode}/used [get]
 func (vh *VoucherHandler) GetVoucherCodeUsed() func(c echo.Context) error {
 	return func(c echo.Context) error {
 		code := c.Param("voucherCode")

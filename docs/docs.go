@@ -16,38 +16,6 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/voucher/:voucherCode/used": {
-            "get": {
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "GetVoucherCodeUsed"
-                ],
-                "summary": "GetVoucherCodeUsed",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "voucherCode",
-                        "name": "voucherCode",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/api/voucher/create": {
             "post": {
                 "consumes": [
@@ -103,6 +71,38 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/models.RedeemVoucherRequest"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/voucher/{voucherCode}/used": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "GetVoucherCodeUsed"
+                ],
+                "summary": "GetVoucherCodeUsed",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "voucherCode",
+                        "name": "voucherCode",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {

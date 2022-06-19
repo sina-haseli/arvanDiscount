@@ -75,7 +75,6 @@ func (v *voucherRepository) GetVoucherCodeUsed(ctx context.Context, code string)
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			// use logger
 			fmt.Println("Error closing rows: ", err)
 		}
 	}(rows)
@@ -112,7 +111,6 @@ func (v *voucherRepository) FindVoucherByCode(ctx context.Context, code string) 
 	defer func(rows *sql.Rows) {
 		err := rows.Close()
 		if err != nil {
-			// use logger
 			fmt.Println("Error closing rows: ", err)
 		}
 	}(rows)

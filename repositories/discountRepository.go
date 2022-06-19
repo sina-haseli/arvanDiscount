@@ -22,6 +22,7 @@ const (
 )
 
 var InvalidVoucherCode = errors.New("invalid voucher code")
+var VoucherExist = errors.New("voucher exist")
 var VoucherAlreadyUsed = errors.New("voucher already redeemed by user")
 var VoucherSoldOut = errors.New("voucher sold out")
 
@@ -40,7 +41,7 @@ func (v *voucherRepository) Create(ctx context.Context, rq *models.VoucherReques
 
 	_, err := v.db.ExecContext(ctx, createVoucherQuery, &vm.Code, &vm.Amount, &vm.Usable)
 	if err != nil {
-		return nil, err
+		return nil, VoucherExist
 	}
 
 	result, err := v.FindVoucherByCode(ctx, vm.Code)

@@ -5,5 +5,6 @@ CREATE TABLE vouchers
     amount     INT       NOT NULL,
     usable     INT       NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT code_unique UNIQUE (code),
     PRIMARY KEY (id)
 );

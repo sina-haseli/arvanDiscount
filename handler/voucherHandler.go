@@ -98,7 +98,12 @@ func (vh *VoucherHandler) CreateVoucher() func(c echo.Context) error {
 
 		voucher, errs := vh.service.Voucher.Create(c.Request().Context(), &rq)
 		if errs != nil {
-			return echo.ErrInternalServerError
+			switch errs {
+			case repositories.VoucherExist:
+				return c.JSON(http.StatusUnprocessableEntity, map[string]interface{}{"message": "voucher code is exist"})
+			default:
+				return echo.ErrInternalServerError
+			}
 		}
 
 		return c.JSON(http.StatusOK, voucher)
